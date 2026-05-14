@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>책 만들기 — bookmaker</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <header>
+    <h1>책 만들기</h1>
+    <p class="subtitle">글을 출판 가능한 책 PDF로 변환합니다.</p>
+  </header>
+
+  <form id="form" autocomplete="off">
+    <label class="field">
+      <span class="label">책 제목 <small>(생략하면 파일명 사용)</small></span>
+      <input name="title" type="text" placeholder="예: 어느 봄날의 기록">
+    </label>
+
+    <label class="field">
+      <span class="label">저자 <small>(선택)</small></span>
+      <input name="author" type="text" placeholder="예: 홍길동">
+    </label>
+
+    <label class="field">
+      <span class="label">책 포맷</span>
+      <select name="format" id="format-select" required></select>
+    </label>
+
+    <div class="field">
+      <span class="label">원고 입력 방식</span>
+      <div class="input-mode-toggle" role="tablist">
+        <button type="button" class="mode-btn active" data-mode="file" role="tab">파일 업로드</button>
+        <button type="button" class="mode-btn" data-mode="text" role="tab">직접 입력</button>
+      </div>
+    </div>
+
+    <label class="field" id="file-field">
+      <span class="label">원고 파일 <small>(.md / .txt / .docx)</small></span>
+      <input name="file" type="file" accept=".md,.markdown,.txt,.docx">
+    </label>
+
+    <label class="field" id="text-field" hidden>
+      <span class="label">원고 내용 <small>(Markdown 문법 사용 가능)</small></span>
+      <textarea name="content" rows="14" placeholder="# 첫 번째 장&#10;&#10;여기에 글을 직접 작성하세요.&#10;&#10;## 절 제목&#10;&#10;본문 내용..."></textarea>
+    </label>
+
+    
+
+    <div class="actions">
+      <button id="preview-btn" type="button" class="btn-secondary">미리보기</button>
+      <button id="submit" type="submit">PDF 생성</button>
+    </div>
+  </form>
+
+  <p id="status" class="status"></p>
+
+  <dialog id="preview-modal" class="modal" aria-label="PDF 미리보기">
+    <div class="modal-header">
+      <span class="modal-title">미리보기</span>
+      <div class="modal-actions">
+        <button type="button" id="preview-download" class="btn-secondary">다운로드</button>
+        <button type="button" class="btn-close" data-close aria-label="닫기">×</button>
+      </div>
+    </div>
+    <iframe id="preview-iframe" class="modal-iframe" title="PDF 미리보기"></iframe>
+  </dialog>
+
+  <footer>
+    <details>
+      <summary>지원하는 입력 형식 자세히</summary>
+      <ul>
+        <li><strong>Markdown (.md)</strong> — # 제목, **굵게**, *기울임*, &gt; 인용, --- 구분선 등 기본 문법 지원</li>
+        <li><strong>일반 텍스트 (.txt)</strong> — 빈 줄로 문단을 구분합니다</li>
+        <li><strong>Word (.docx)</strong> — 제목·본문·인용 등 기본 서식 보존 (이미지는 단순화)</li>
+      </ul>
+    </details>
+  </footer>
+</main>
+
+<script>
+const formatSelect = document.getElementById('format-select');
+const form = document.getElementById('form');
+const submitBtn = document.getElementById('submit');
+const status = document.getElementById('status');
+const fileField = document.getElementById('file-field');
+const textField = document.getElementById('text-field');
+const fileInput = fileField.querySelector('input[type="file"]');
+const textInput = textField.querySelector('textarea');
+const modeBtns = document.querySelectorAll('.mode-btn');
+
+let mode = 'file';
+function setMode(newMode) {
+  mode = newMode;
+  for (const btn of modeBtns) {
+    btn.classList.toggle('active', btn.dataset.mode === mode);
+  }
+  if (mode === 'file') {
+    fileField.hidden = false;
+    textField.hidden = true;
+    fileInput.required = true;
+    textInput.required = false;
+  } else {
+    fileField.hidden = true;
+    textField.hidden = false;
+    fileInput.required = false;
+    textInput.required = true;
+  }
+}
+for (const btn of modeBtns) {
+  btn.addEventListener('click', () => setMode(btn.dataset.mode));
+}
+setMode('file');
+
+fetch('/api/formats')
+  .then((r) => r.json())
+  .then((formats) => {
+    for (const f of formats) {
+      const w = f.width.replace('mm', '');
+      const h = f.height.replace('mm', '');
+      const opt = document.createElement('option');
+      opt.value = f.id;
+      opt.textContent = `${f.name} (${w}×${h}mm)`;
+      formatSelect.appendChild(opt);
+    }
+  })
+  .catch(() => {
+    status.textContent = '서버에서 포맷 목록을 가져오지 못했어요.';
+    status.className = 'status error';
+  });
+
+const previewBtn = document.getElementById('preview-btn');
+const previewModal = document.getElementById('preview-modal');
+const previewIframe = document.getElementById('preview-iframe');
+const previewDownload = document.getElementById('preview-download');
+let currentPreview = null;
+
+function setBusy(busy, label) {
+  submitBtn.disabled = busy;
+  previewBtn.disabled = busy;
+  if (busy) {
+    status.className = 'status busy';
+    status.textContent = label || 'PDF 생성 중... (긴 글은 30초 이상 걸릴 수 있어요)';
+  }
+}
+
+async function generatePdf() {
+  if (!form.reportValidity()) return null;
+  const fd = new FormData(form);
+  const res = await fetch('/api/convert', { method: 'POST', body: fd });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || `오류 ${res.status}`);
+  }
+  const blob = await res.blob();
+  const disp = res.headers.get('content-disposition') || '';
+  const m = disp.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i);
+  const filename = m ? decodeURIComponent(m[1]) : 'book.pdf';
+  return { blob, filename };
+}
+
+function triggerDownload(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function clearPreview() {
+  if (currentPreview) {
+    URL.revokeObjectURL(currentPreview.url);
+    currentPreview = null;
+  }
+  previewIframe.src = 'about:blank';
+}
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  setBusy(true);
+  try {
+    const result = await generatePdf();
+    if (!result) return;
+    triggerDownload(result.blob, result.filename);
+    status.className = 'status ok';
+    status.textContent = `완료 — ${result.filename} 다운로드됨`;
+  } catch (err) {
+    status.className = 'status error';
+    status.textContent = '실패: ' + err.message;
+  } finally {
+    setBusy(false);
+  }
+});
+
+previewBtn.addEventListener('click', async () => {
+  if (!form.reportValidity()) return;
+  setBusy(true, '미리보기 생성 중...');
+  try {
+    const result = await generatePdf();
+    if (!result) return;
+    clearPreview();
+    const url = URL.createObjectURL(result.blob);
+    currentPreview = { url, blob: result.blob, filename: result.filename };
+    previewIframe.src = url;
+    if (typeof previewModal.showModal === 'function') {
+      previewModal.showModal();
+    } else {
+      previewModal.setAttribute('open', '');
+    }
+    status.className = 'status ok';
+    status.textContent = '미리보기 준비 완료';
+  } catch (err) {
+    status.className = 'status error';
+    status.textContent = '실패: ' + err.message;
+  } finally {
+    setBusy(false);
+  }
+});
+
+previewDownload.addEventListener('click', () => {
+  if (currentPreview) triggerDownload(currentPreview.blob, currentPreview.filename);
+});
+
+previewModal.addEventListener('close', clearPreview);
+
+previewModal.addEventListener('click', (e) => {
+  const target = e.target;
+  if (target.matches('[data-close]')) {
+    previewModal.close();
+    return;
+  }
+  if (target === previewModal) {
+    const rect = previewModal.getBoundingClientRect();
+    const inside =
+      e.clientX >= rect.left &&
+      e.clientX <= rect.right &&
+      e.clientY >= rect.top &&
+      e.clientY <= rect.bottom;
+    if (!inside) previewModal.close();
+  }
+});
+</script>
+</body>
+</html>
