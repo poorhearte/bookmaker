@@ -65,10 +65,16 @@ app.post('/api/convert', upload.single('file'), async (req, res) => {
   try {
     const { html, headings } = await toHtml(sourceFile);
     const pdf = await htmlToPdf({ html, headings, format, title, author });
+    const sanitize = (s) => s.replace(/[<>:"/\\|?*\x00-\x1f]/g, '').trim();
+    const today = new Date().toISOString().slice(0, 10);
+    const parts = [sanitize(title)];
+    if (author) parts.push(sanitize(author));
+    parts.push(today);
+    const filename = `${parts.filter(Boolean).join('_')}.pdf`;
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader(
       'Content-Disposition',
-      `attachment; filename*=UTF-8''${encodeURIComponent(title)}.pdf`,
+      `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`,
     );
     res.end(pdf);
   } catch (err) {
