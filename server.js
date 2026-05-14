@@ -67,10 +67,13 @@ app.post('/api/convert', upload.single('file'), async (req, res) => {
     const pdf = await htmlToPdf({ html, headings, format, title, author });
     const sanitize = (s) => s.replace(/[<>:"/\\|?*\x00-\x1f]/g, '').trim();
     const today = new Date().toISOString().slice(0, 10);
-    const parts = [sanitize(title)];
-    if (author) parts.push(sanitize(author));
-    parts.push(today);
-    const filename = `${parts.filter(Boolean).join('_')}.pdf`;
+    const parts = [
+      sanitize(title),
+      author ? sanitize(author) : null,
+      sanitize(format.name),
+      today,
+    ].filter(Boolean);
+    const filename = `${parts.join('_')}_.pdf`;
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader(
       'Content-Disposition',
