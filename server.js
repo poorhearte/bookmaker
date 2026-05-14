@@ -21,6 +21,46 @@ const app = express();
 app.use(express.static(join(__dirname, 'public')));
 app.use(express.json());
 
+async function prepareSource(req) {
+  const content = (req.body.content || '').trim();
+  const hasFile = !!req.file;
+  const hasContent = content.length > 0;
+
+  if (!hasFile && !hasContent) {
+    return { error: '원고 파일 또는 직접 입력 내용이 필요해요' };
+  }
+  if (hasFile) return { sourceFile: req.file, tempPath: null, hasContent: false };
+
+  const tempPath = join(UPLOAD_DIR, `${randomUUID()}.md`);
+  await writeFile(tempPath, content, 'utf-8');
+  return {
+    sourceFile: { path: tempPath, originalname: 'manuscript.md' },
+    tempPath,
+    hasContent: true,
+  };
+}
+
+async function cleanupSource(req, tempPath) {
+  if (req.file) await unlink(req.file.path).catch(() => {});
+  if (tempPath) await unlink(tempPath).catch(() => {});
+}
+
+const normalize = (s) => s.replace(/\s+/g, ' ').trim();
+
+function parseUserToc(tocText, headings) {
+  const headingMap = new Map(headings.map((h) => [normalize(h.text), h.id]));
+  const items = [];
+  for (const rawLine of tocText.split('\n')) {
+    const trimmed = rawLine.replace(/^[-*•]\s*/, '').trim();
+    if (!trimmed) continue;
+    const isIndented = /^(\s{2,}|\t)/.test(rawLine);
+    const level = isIndented ? 2 : 1;
+    const matchedId = headingMap.get(normalize(trimmed)) || null;
+    items.push({ text: trimmed, level, matchedId });
+  }
+  return items;
+}
+
 app.get('/api/formats', (_req, res) => {
   res.json(
     Object.entries(FORMATS).map(([id, f]) => ({
@@ -32,39 +72,45 @@ app.get('/api/formats', (_req, res) => {
   );
 });
 
-app.post('/api/convert', upload.single('file'), async (req, res) => {
-  const content = (req.body.content || '').trim();
-  const hasFile = !!req.file;
-  const hasContent = content.length > 0;
-
-  if (!hasFile && !hasContent) {
-    return res.status(400).json({ error: '원고 파일 또는 직접 입력 내용이 필요해요' });
+app.post('/api/extract-headings', upload.single('file'), async (req, res) => {
+  const prep = await prepareSource(req);
+  if (prep.error) return res.status(400).json({ error: prep.error });
+  try {
+    const { headings } = await toHtml(prep.sourceFile);
+    res.json({
+      headings: headings.map((h) => ({ text: h.text, level: h.level })),
+    });
+  } catch (err) {
+    console.error('[extract-headings] failed:', err);
+    res.status(500).json({ error: err.message || '헤딩 추출 실패' });
+  } finally {
+    await cleanupSource(req, prep.tempPath);
   }
+});
+
+app.post('/api/convert', upload.single('file'), async (req, res) => {
+  const prep = await prepareSource(req);
+  if (prep.error) return res.status(400).json({ error: prep.error });
 
   const formatId = req.body.format || 'sinkuk';
   const format = FORMATS[formatId];
   if (!format) {
-    if (hasFile) await unlink(req.file.path).catch(() => {});
+    await cleanupSource(req, prep.tempPath);
     return res.status(400).json({ error: `알 수 없는 책 포맷: ${formatId}` });
   }
 
-  let sourceFile;
-  let tempPath = null;
-  if (hasFile) {
-    sourceFile = req.file;
-  } else {
-    tempPath = join(UPLOAD_DIR, `${randomUUID()}.md`);
-    await writeFile(tempPath, content, 'utf-8');
-    sourceFile = { path: tempPath, originalname: 'manuscript.md' };
-  }
-
-  const baseName = sourceFile.originalname.replace(/\.[^.]+$/, '');
-  const title = (req.body.title || '').trim() || (hasContent ? '제목 없음' : baseName);
+  const baseName = prep.sourceFile.originalname.replace(/\.[^.]+$/, '');
+  const title =
+    (req.body.title || '').trim() || (prep.hasContent ? '제목 없음' : baseName);
   const author = (req.body.author || '').trim();
+  const tocText = (req.body.toc || '').trim();
 
   try {
-    const { html, headings } = await toHtml(sourceFile);
-    const pdf = await htmlToPdf({ html, headings, format, title, author });
+    const { html, headings } = await toHtml(prep.sourceFile);
+    const tocItems = tocText
+      ? parseUserToc(tocText, headings)
+      : headings.map((h) => ({ text: h.text, level: h.level, matchedId: h.id }));
+    const pdf = await htmlToPdf({ html, tocItems, format, title, author });
     const sanitize = (s) => s.replace(/[<>:"/\\|?*\x00-\x1f]/g, '').trim();
     const today = new Date().toISOString().slice(0, 10);
     const parts = [
@@ -84,8 +130,7 @@ app.post('/api/convert', upload.single('file'), async (req, res) => {
     console.error('[convert] failed:', err);
     res.status(500).json({ error: err.message || '변환 실패' });
   } finally {
-    if (hasFile) await unlink(req.file.path).catch(() => {});
-    if (tempPath) await unlink(tempPath).catch(() => {});
+    await cleanupSource(req, prep.tempPath);
   }
 });
 

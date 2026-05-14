@@ -145,11 +145,21 @@ textarea {
   outline: none;
   line-height: 1.7;
   resize: vertical;
-  min-height: 180px;
+  min-height: 80px;
   transition: border-color 0.15s;
 }
 
+textarea[name="content"] { min-height: 180px; }
+
 textarea:focus { border-color: var(--accent); }
+
+.toc-autofill {
+  align-self: flex-start;
+  margin-top: 6px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 400;
+}
 
 input[type="file"] {
   font: inherit;
@@ -215,7 +225,7 @@ button:disabled {
 
 .btn-secondary:disabled {
   background: #fff;
-  color: #888;
+  color: #757575;
   border-color: #ccc;
 }
 

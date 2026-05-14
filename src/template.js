@@ -76,16 +76,19 @@ ${bodyStyles(format)}
 </html>`;
 }
 
-function buildToc(headings) {
-  if (!headings || headings.length === 0) return '';
-  const items = headings
-    .map(
-      (h) => `<li class="toc-item toc-level-${h.level}">
-      <span class="toc-text">${esc(h.text)}</span>
+function buildToc(tocItems) {
+  if (!tocItems || tocItems.length === 0) return '';
+  const items = tocItems
+    .map((it) => {
+      const pageSpan = it.matchedId
+        ? `<span class="toc-page" data-target="${esc(it.matchedId)}">·</span>`
+        : `<span class="toc-page toc-page-empty">&nbsp;</span>`;
+      return `<li class="toc-item toc-level-${it.level}">
+      <span class="toc-text">${esc(it.text)}</span>
       <span class="toc-dots" aria-hidden="true"></span>
-      <span class="toc-page" data-target="${esc(h.id)}">·</span>
-    </li>`,
-    )
+      ${pageSpan}
+    </li>`;
+    })
     .join('\n');
   return `<section class="toc">
   <h1 class="toc-heading">목차</h1>
@@ -110,8 +113,8 @@ function buildColophon({ title, author }) {
 </section>`;
 }
 
-export function buildContentHtml({ html, format, title, author, headings }) {
-  const toc = buildToc(headings);
+export function buildContentHtml({ html, format, title, author, tocItems }) {
+  const toc = buildToc(tocItems);
   const colophon = buildColophon({ title, author });
   return `<!DOCTYPE html>
 <html lang="ko">

@@ -47,7 +47,16 @@
       <textarea name="content" rows="14" placeholder="# 첫 번째 장&#10;&#10;여기에 글을 직접 작성하세요.&#10;&#10;## 절 제목&#10;&#10;본문 내용..."></textarea>
     </label>
 
-    
+    <div class="field">
+      <span class="label">
+        목차
+        <small>(선택 — 비워두면 본문 헤딩에서 자동 생성)</small>
+      </span>
+      <textarea name="toc" id="toc-input" rows="5" placeholder="한 줄에 한 항목&#10;공백으로 들여쓰면 하위 항목&#10;예:&#10;제1장 봄날의 기록&#10;  들어가며&#10;제2장 여름"></textarea>
+      <button type="button" id="toc-autofill-btn" class="btn-secondary toc-autofill">
+        본문에서 자동 채우기
+      </button>
+    </div>
 
     <div class="actions">
       <button id="preview-btn" type="button" class="btn-secondary">미리보기</button>
@@ -135,11 +144,61 @@ const previewBtn = document.getElementById('preview-btn');
 const previewModal = document.getElementById('preview-modal');
 const previewIframe = document.getElementById('preview-iframe');
 const previewDownload = document.getElementById('preview-download');
+const tocInput = document.getElementById('toc-input');
+const tocAutofillBtn = document.getElementById('toc-autofill-btn');
 let currentPreview = null;
+
+function buildSourceFormData() {
+  const fd = new FormData();
+  if (mode === 'file' && fileInput.files[0]) {
+    fd.append('file', fileInput.files[0]);
+  } else if (mode === 'text' && textInput.value.trim()) {
+    fd.append('content', textInput.value);
+  } else {
+    return null;
+  }
+  return fd;
+}
+
+tocAutofillBtn.addEventListener('click', async () => {
+  const fd = buildSourceFormData();
+  if (!fd) {
+    status.className = 'status error';
+    status.textContent = '먼저 원고 파일 또는 직접 입력 내용을 채워주세요.';
+    return;
+  }
+  tocAutofillBtn.disabled = true;
+  status.className = 'status busy';
+  status.textContent = '본문에서 헤딩 추출 중...';
+  try {
+    const res = await fetch('/api/extract-headings', { method: 'POST', body: fd });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || `오류 ${res.status}`);
+    }
+    const { headings } = await res.json();
+    if (!headings || headings.length === 0) {
+      status.className = 'status error';
+      status.textContent = '본문에서 헤딩을 찾지 못했어요. (# 또는 ## 사용 필요)';
+      return;
+    }
+    tocInput.value = headings
+      .map((h) => (h.level === 2 ? '  ' : '') + h.text)
+      .join('\n');
+    status.className = 'status ok';
+    status.textContent = `${headings.length}개 항목을 채웠어요. 필요하면 자유롭게 수정하세요.`;
+  } catch (err) {
+    status.className = 'status error';
+    status.textContent = '실패: ' + err.message;
+  } finally {
+    tocAutofillBtn.disabled = false;
+  }
+});
 
 function setBusy(busy, label) {
   submitBtn.disabled = busy;
   previewBtn.disabled = busy;
+  tocAutofillBtn.disabled = busy;
   if (busy) {
     status.className = 'status busy';
     status.textContent = label || 'PDF 생성 중... (긴 글은 30초 이상 걸릴 수 있어요)';

@@ -82,13 +82,14 @@ async function fillTocPageNumbers(page, format) {
   }, pageMap);
 }
 
-async function renderContent(browser, { html, format, title, author, headings }) {
+async function renderContent(browser, { html, format, title, author, tocItems }) {
   const page = await browser.newPage();
   try {
-    const fullHtml = buildContentHtml({ html, format, title, author, headings });
+    const fullHtml = buildContentHtml({ html, format, title, author, tocItems });
     await page.setContent(fullHtml, { waitUntil: 'networkidle0', timeout: 60_000 });
 
-    if (headings && headings.length > 0) {
+    const hasMatched = tocItems && tocItems.some((it) => it.matchedId);
+    if (hasMatched) {
       await fillTocPageNumbers(page, format);
     }
 
@@ -122,11 +123,11 @@ async function mergePdfs(pdfBuffers) {
   return Buffer.from(out);
 }
 
-export async function htmlToPdf({ html, headings, format, title, author }) {
+export async function htmlToPdf({ html, tocItems, format, title, author }) {
   const browser = await getBrowser();
   const [titlePdf, contentPdf] = await Promise.all([
     renderTitlePage(browser, { format, title, author }),
-    renderContent(browser, { html, format, title, author, headings }),
+    renderContent(browser, { html, format, title, author, tocItems }),
   ]);
   return await mergePdfs([titlePdf, contentPdf]);
 }
