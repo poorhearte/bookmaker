@@ -69,6 +69,14 @@ form {
   gap: 6px;
 }
 
+/* `.field`/`.collapsible` set an explicit display that would otherwise
+   override the UA `[hidden] { display: none }`, so re-assert it with
+   higher specificity for the mode toggle to actually hide fields. */
+.field[hidden],
+.collapsible[hidden] {
+  display: none;
+}
+
 .field .label {
   font-weight: 500;
   font-size: 14px;
