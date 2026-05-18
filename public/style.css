@@ -108,13 +108,17 @@ select:focus {
 
 .margin-cell {
   display: flex;
-  flex-direction: column;
-  gap: 5px;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
 }
 
 .margin-cell span {
+  flex: 0 0 auto;
+  min-width: 5.5em;
   font-size: 13px;
   color: var(--ink-soft);
+  white-space: nowrap;
 }
 
 .margin-cell span small {
@@ -122,7 +126,8 @@ select:focus {
 }
 
 .margin-cell input {
-  width: 100%;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .checkbox-row {
