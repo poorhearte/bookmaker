@@ -182,7 +182,8 @@ select:focus {
   font-size: 11px;
 }
 
-.margin-cell input {
+.margin-cell input,
+.margin-cell select {
   flex: 1 1 auto;
   min-width: 0;
 }
