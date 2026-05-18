@@ -55,6 +55,36 @@
       </label>
     </div>
 
+    <label class="field">
+      <span class="label">글꼴 <small>(자가출판 권장 무료 명조 계열)</small></span>
+      <select name="fontFamily" id="font-family">
+        <option value="noto">본명조 (Noto Serif KR)</option>
+        <option value="nanum">나눔명조</option>
+      </select>
+    </label>
+
+    <div class="field">
+      <span class="label">본문 조판 <small>(readme 권장 범위)</small></span>
+      <div class="margin-grid">
+        <label class="margin-cell">
+          <span>글꼴 크기 <small>(pt)</small></span>
+          <input name="fontSizePt" id="font-size" type="number" min="8" max="13" step="0.5" value="10" inputmode="decimal">
+        </label>
+        <label class="margin-cell">
+          <span>행간 <small>(pt)</small></span>
+          <input name="lineHeightPt" id="line-height" type="number" min="14" max="24" step="0.5" value="18" inputmode="decimal">
+        </label>
+        <label class="margin-cell">
+          <span>자간 <small>(1/1000)</small></span>
+          <input name="letterSpacing" id="letter-spacing" type="number" min="-150" max="0" step="5" value="-50" inputmode="numeric">
+        </label>
+        <label class="margin-cell">
+          <span>첫 행 들여쓰기 <small>(mm)</small></span>
+          <input name="firstIndentMm" id="first-indent" type="number" min="0" max="8" step="0.5" value="3" inputmode="decimal">
+        </label>
+      </div>
+    </div>
+
     <div class="field">
       <span class="label">원고 입력 방식</span>
       <div class="input-mode-toggle" role="tablist">
@@ -166,18 +196,29 @@ function applyFormatMargins(formatId) {
   marginOuter.value = mmNum(f.margin.right);
 }
 
+function addFormatOption(group, f) {
+  const w = f.width.replace('mm', '');
+  const h = f.height.replace('mm', '');
+  const opt = document.createElement('option');
+  opt.value = f.id;
+  const use = f.use ? ` · ${f.use}` : '';
+  opt.textContent = `${f.name} (${w}×${h}mm)${use}`;
+  group.appendChild(opt);
+}
+
 fetch('/api/formats')
   .then((r) => r.json())
   .then((formats) => {
+    const recommended = document.createElement('optgroup');
+    recommended.label = '추천 (자가출판 표준 판형)';
+    const others = document.createElement('optgroup');
+    others.label = '기타';
     for (const f of formats) {
       formatMap.set(f.id, f);
-      const w = f.width.replace('mm', '');
-      const h = f.height.replace('mm', '');
-      const opt = document.createElement('option');
-      opt.value = f.id;
-      opt.textContent = `${f.name} (${w}×${h}mm)`;
-      formatSelect.appendChild(opt);
+      addFormatOption(f.recommended ? recommended : others, f);
     }
+    if (recommended.children.length) formatSelect.appendChild(recommended);
+    if (others.children.length) formatSelect.appendChild(others);
     if (formatSelect.value) applyFormatMargins(formatSelect.value);
   })
   .catch(() => {

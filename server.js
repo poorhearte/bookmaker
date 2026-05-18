@@ -66,9 +66,12 @@ app.get('/api/formats', (_req, res) => {
     Object.entries(FORMATS).map(([id, f]) => ({
       id,
       name: f.name,
+      use: f.use || '',
+      recommended: !!f.recommended,
       width: f.width,
       height: f.height,
       margin: f.margin,
+      bodyFontSize: f.bodyFontSize,
     })),
   );
 });
@@ -84,6 +87,29 @@ function resolveMargin(body, format) {
     bottom: mm(body.marginBottom, format.margin.bottom),
     left: mm(body.marginInner, format.margin.left),
     right: mm(body.marginOuter, format.margin.right),
+  };
+}
+
+// readme 권장 범위로 클램프. 자간은 1/1000 em 단위(한국 DTP 관행).
+const FONT_FAMILIES = {
+  noto: "'Noto Serif KR', '맑은 명조', 'Batang', serif",
+  nanum: "'Nanum Myeongjo', 'Noto Serif KR', 'Batang', serif",
+};
+
+function resolveTypography(body, format) {
+  const clamp = (raw, min, max, fallback) => {
+    const n = parseFloat(raw);
+    if (!Number.isFinite(n)) return fallback;
+    return Math.min(max, Math.max(min, n));
+  };
+  const fontKey = body.fontFamily in FONT_FAMILIES ? body.fontFamily : 'noto';
+  const defaultSize = parseFloat(format.bodyFontSize) || 10;
+  return {
+    fontFamily: FONT_FAMILIES[fontKey],
+    fontSizePt: clamp(body.fontSizePt, 8, 13, defaultSize),
+    lineHeightPt: clamp(body.lineHeightPt, 14, 24, 18),
+    letterSpacingEm: clamp(body.letterSpacing, -150, 0, -50) / 1000,
+    firstIndentMm: clamp(body.firstIndentMm, 0, 8, 3),
   };
 }
 
@@ -124,6 +150,7 @@ app.post('/api/convert', upload.single('file'), async (req, res) => {
   );
 
   const effFormat = { ...format, margin: resolveMargin(req.body, format) };
+  const typography = resolveTypography(req.body, format);
 
   try {
     const { html, headings } = await toHtml(prep.sourceFile);
@@ -137,6 +164,7 @@ app.post('/api/convert', upload.single('file'), async (req, res) => {
       title,
       author,
       mirror,
+      typography,
     });
     const sanitize = (s) => s.replace(/[<>:"/\\|?*\x00-\x1f]/g, '').trim();
     const today = new Date().toISOString().slice(0, 10);

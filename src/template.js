@@ -4,17 +4,26 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ESC[c]);
 const SHARED_HEAD = `
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;700&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">`;
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;700&family=Nanum+Myeongjo:wght@400;700;800&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">`;
 
-function bodyStyles(format) {
+const DEFAULT_TYPO = {
+  fontFamily: "'Noto Serif KR', '맑은 명조', 'Batang', serif",
+  fontSizePt: 10,
+  lineHeightPt: 18,
+  letterSpacingEm: -0.05,
+  firstIndentMm: 3,
+};
+
+function bodyStyles(format, typo = DEFAULT_TYPO) {
   return `
 @page { size: ${format.width} ${format.height}; }
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
 body {
-  font-family: 'Noto Serif KR', '맑은 명조', 'Batang', serif;
-  font-size: ${format.bodyFontSize};
-  line-height: 1.85;
+  font-family: ${typo.fontFamily};
+  font-size: ${typo.fontSizePt}pt;
+  line-height: ${typo.lineHeightPt}pt;
+  letter-spacing: ${typo.letterSpacingEm}em;
   color: #111;
   word-break: keep-all;
   overflow-wrap: break-word;
@@ -23,7 +32,7 @@ body {
 }`;
 }
 
-export function buildTitlePageHtml({ format, title, author }) {
+export function buildTitlePageHtml({ format, title, author, typography }) {
   const formattedDate = new Date().toLocaleDateString('ko-KR', {
     year: 'numeric',
     month: 'long',
@@ -34,7 +43,7 @@ export function buildTitlePageHtml({ format, title, author }) {
 <meta charset="UTF-8">
 <title>${esc(title)}</title>${SHARED_HEAD}
 <style>
-${bodyStyles(format)}
+${bodyStyles(format, typography)}
 .title-page {
   display: flex;
   flex-direction: column;
@@ -132,6 +141,7 @@ export function buildContentHtml({
   tocItems,
   mirror = false,
   firstContentPageIsRecto = true,
+  typography = DEFAULT_TYPO,
 }) {
   const toc = buildToc(tocItems);
   const colophon = buildColophon({ title, author });
@@ -144,7 +154,7 @@ export function buildContentHtml({
 <meta charset="UTF-8">
 <title>${esc(title)}</title>${SHARED_HEAD}
 <style>
-${bodyStyles(format)}
+${bodyStyles(format, typography)}
 ${mirrorCss}
 .toc {
   page-break-after: always;
@@ -211,7 +221,7 @@ ${mirrorCss}
 }
 .content p {
   margin: 0 0 0.3em 0;
-  text-indent: 1em;
+  text-indent: ${typography.firstIndentMm}mm;
   text-align: justify;
   hyphens: auto;
   orphans: 2;

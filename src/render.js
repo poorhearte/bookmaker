@@ -24,10 +24,10 @@ export async function shutdownBrowser() {
   }
 }
 
-async function renderTitlePage(browser, { format, title, author }) {
+async function renderTitlePage(browser, { format, title, author, typography }) {
   const page = await browser.newPage();
   try {
-    const html = buildTitlePageHtml({ format, title, author });
+    const html = buildTitlePageHtml({ format, title, author, typography });
     await page.setContent(html, { waitUntil: 'networkidle0', timeout: 60_000 });
     return await page.pdf({
       width: format.width,
@@ -84,7 +84,16 @@ async function fillTocPageNumbers(page, format) {
 
 async function renderContent(
   browser,
-  { html, format, title, author, tocItems, mirror, firstContentPageIsRecto },
+  {
+    html,
+    format,
+    title,
+    author,
+    tocItems,
+    mirror,
+    firstContentPageIsRecto,
+    typography,
+  },
 ) {
   const page = await browser.newPage();
   try {
@@ -96,6 +105,7 @@ async function renderContent(
       tocItems,
       mirror,
       firstContentPageIsRecto,
+      typography,
     });
     await page.setContent(fullHtml, { waitUntil: 'networkidle0', timeout: 60_000 });
 
@@ -151,20 +161,33 @@ export async function htmlToPdf({
   title,
   author,
   mirror = false,
+  typography,
 }) {
   const browser = await getBrowser();
 
   if (!mirror) {
     const [titlePdf, contentPdf] = await Promise.all([
-      renderTitlePage(browser, { format, title, author }),
-      renderContent(browser, { html, format, title, author, tocItems }),
+      renderTitlePage(browser, { format, title, author, typography }),
+      renderContent(browser, {
+        html,
+        format,
+        title,
+        author,
+        tocItems,
+        typography,
+      }),
     ]);
     return await mergePdfs([titlePdf, contentPdf]);
   }
 
   // Mirror needs the title page count first: the content's first physical
   // page is recto only if the page count before it is even.
-  const titlePdf = await renderTitlePage(browser, { format, title, author });
+  const titlePdf = await renderTitlePage(browser, {
+    format,
+    title,
+    author,
+    typography,
+  });
   const titleDoc = await PDFDocument.load(titlePdf);
   const firstContentPageIsRecto = titleDoc.getPageCount() % 2 === 0;
 
@@ -176,6 +199,7 @@ export async function htmlToPdf({
     tocItems,
     mirror: true,
     firstContentPageIsRecto,
+    typography,
   });
   return await mergePdfs([titlePdf, contentPdf]);
 }
