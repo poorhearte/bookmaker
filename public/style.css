@@ -188,6 +188,12 @@ select:focus {
   min-width: 0;
 }
 
+/* 위/아래/안/바깥 여백 칸은 짧은 고정폭 (조판 그리드는 그대로) */
+.margin-cell input[name^="margin"] {
+  flex: 0 0 auto;
+  width: 4.5em;
+}
+
 .checkbox-row {
   display: flex;
   align-items: flex-start;
