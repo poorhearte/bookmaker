@@ -8,10 +8,10 @@
 </head>
 <body>
 <main>
-  <header>
+  <!-- <header>
     <h1>책 만들기</h1>
     <p class="subtitle">글을 출판 가능한 책 PDF로 변환합니다.</p>
-  </header>
+  </header> -->
 
   <form id="form" autocomplete="off">
     <label class="field">
@@ -30,7 +30,7 @@
     </label>
 
     <div class="field">
-      <span class="label">여백 <small>(mm — 포맷 선택 시 기본값이 채워집니다)</small></span>
+      <span class="label">여백(mm) <small>책 포맷 선택 시 기본값이 채워집니다)</small></span>
       <div class="margin-grid">
         <label class="margin-cell">
           <span>위쪽</span>
@@ -56,7 +56,7 @@
     </div>
 
     <label class="field">
-      <span class="label">글꼴 <small>(자가출판 권장 무료 명조 계열)</small></span>
+      <span class="label">글꼴 </span>
       <select name="fontFamily" id="font-family">
         <option value="noto">본명조 (Noto Serif KR)</option>
         <option value="nanum">나눔명조</option>
@@ -64,7 +64,7 @@
     </label>
 
     <div class="field">
-      <span class="label">본문 조판 <small>(readme 권장 범위)</small></span>
+      <!-- <span class="label">본문 조판 <small>(readme 권장 범위)</small></span> -->
       <div class="margin-grid">
         <label class="margin-cell">
           <span>글꼴 크기 <small>(pt)</small></span>
@@ -231,7 +231,7 @@ fetch('/api/formats')
   .then((r) => r.json())
   .then((formats) => {
     const recommended = document.createElement('optgroup');
-    recommended.label = '추천 (자가출판 표준 판형)';
+    recommended.label = '추천 (표준 판형)';
     const others = document.createElement('optgroup');
     others.label = '기타';
     for (const f of formats) {
