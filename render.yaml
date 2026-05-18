@@ -1,0 +1,14 @@
+# Render Blueprint. In the Render dashboard: New → Blueprint → pick this
+# repo. Singapore is the closest free region to Korea.
+services:
+  - type: web
+    name: bookmaker
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /
+    autoDeployTrigger: commit
+    envVars:
+      - key: PORT
+        value: "3000"

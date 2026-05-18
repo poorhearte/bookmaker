@@ -1,0 +1,9 @@
+node_modules
+uploads
+output
+.git
+.gitignore
+.claude
+*.log
+.DS_Store
+readme.md

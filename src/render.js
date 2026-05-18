@@ -10,7 +10,17 @@ function getBrowser() {
   if (!browserPromise) {
     browserPromise = puppeteer.launch({
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      // PUPPETEER_EXECUTABLE_PATH lets the container use its system
+      // Chromium instead of a bundled download.
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+      // --disable-dev-shm-usage is critical in containers (Render/Docker)
+      // where /dev/shm is tiny and Chromium would otherwise crash.
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+      ],
     });
   }
   return browserPromise;
