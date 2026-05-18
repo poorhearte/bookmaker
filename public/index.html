@@ -77,10 +77,10 @@
           <span>자간 <small>(1/1000)</small></span>
           <input name="letterSpacing" id="letter-spacing" type="number" min="-150" max="0" step="5" value="-50" inputmode="numeric">
         </label>
-        <label class="margin-cell">
+        <!-- <label class="margin-cell">
           <span>첫 행 들여쓰기 <small>(mm)</small></span>
           <input name="firstIndentMm" id="first-indent" type="number" min="0" max="8" step="0.5" value="3" inputmode="decimal">
-        </label>
+        </label> -->
       </div>
     </div>
 
@@ -154,6 +154,7 @@ const submitBtn = document.getElementById('submit');
 const status = document.getElementById('status');
 const fileField = document.getElementById('file-field');
 const textField = document.getElementById('text-field');
+const tocField = document.getElementById('toc-field');
 const fileInput = fileField.querySelector('input[type="file"]');
 const textInput = textField.querySelector('textarea');
 const modeBtns = document.querySelectorAll('.mode-btn');
@@ -167,11 +168,14 @@ function setMode(newMode) {
   if (mode === 'file') {
     fileField.hidden = false;
     textField.hidden = true;
+    tocField.hidden = true;
     fileField.open = true;
   } else {
     fileField.hidden = true;
     textField.hidden = false;
+    tocField.hidden = false;
     textField.open = true;
+    tocField.open = true;
   }
 }
 
