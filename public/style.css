@@ -82,6 +82,7 @@ form {
 }
 
 input[type="text"],
+input[type="number"],
 select {
   font: inherit;
   padding: 10px 12px;
@@ -94,8 +95,34 @@ select {
 }
 
 input[type="text"]:focus,
+input[type="number"]:focus,
 select:focus {
   border-color: var(--accent);
+}
+
+.margin-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.margin-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.margin-cell span {
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.margin-cell span small {
+  font-size: 11px;
+}
+
+.margin-cell input {
+  width: 100%;
 }
 
 .input-mode-toggle {

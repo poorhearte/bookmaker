@@ -68,9 +68,24 @@ app.get('/api/formats', (_req, res) => {
       name: f.name,
       width: f.width,
       height: f.height,
+      margin: f.margin,
     })),
   );
 });
+
+// 안쪽(inner) = 제본 쪽 = left, 바깥쪽(outer) = right (좌철 기준)
+function resolveMargin(body, format) {
+  const mm = (raw, fallback) => {
+    const n = parseFloat(raw);
+    return Number.isFinite(n) && n >= 0 ? `${n}mm` : fallback;
+  };
+  return {
+    top: mm(body.marginTop, format.margin.top),
+    bottom: mm(body.marginBottom, format.margin.bottom),
+    left: mm(body.marginInner, format.margin.left),
+    right: mm(body.marginOuter, format.margin.right),
+  };
+}
 
 app.post('/api/extract-headings', upload.single('file'), async (req, res) => {
   const prep = await prepareSource(req);
@@ -105,12 +120,20 @@ app.post('/api/convert', upload.single('file'), async (req, res) => {
   const author = (req.body.author || '').trim();
   const tocText = (req.body.toc || '').trim();
 
+  const effFormat = { ...format, margin: resolveMargin(req.body, format) };
+
   try {
     const { html, headings } = await toHtml(prep.sourceFile);
     const tocItems = tocText
       ? parseUserToc(tocText, headings)
       : headings.map((h) => ({ text: h.text, level: h.level, matchedId: h.id }));
-    const pdf = await htmlToPdf({ html, tocItems, format, title, author });
+    const pdf = await htmlToPdf({
+      html,
+      tocItems,
+      format: effFormat,
+      title,
+      author,
+    });
     const sanitize = (s) => s.replace(/[<>:"/\\|?*\x00-\x1f]/g, '').trim();
     const today = new Date().toISOString().slice(0, 10);
     const parts = [

@@ -30,6 +30,28 @@
     </label>
 
     <div class="field">
+      <span class="label">여백 <small>(mm — 포맷 선택 시 기본값이 채워집니다)</small></span>
+      <div class="margin-grid">
+        <label class="margin-cell">
+          <span>위쪽</span>
+          <input name="marginTop" id="margin-top" type="number" min="0" step="1" inputmode="decimal">
+        </label>
+        <label class="margin-cell">
+          <span>아래쪽</span>
+          <input name="marginBottom" id="margin-bottom" type="number" min="0" step="1" inputmode="decimal">
+        </label>
+        <label class="margin-cell">
+          <span>안쪽 <small>(제본)</small></span>
+          <input name="marginInner" id="margin-inner" type="number" min="0" step="1" inputmode="decimal">
+        </label>
+        <label class="margin-cell">
+          <span>바깥쪽</span>
+          <input name="marginOuter" id="margin-outer" type="number" min="0" step="1" inputmode="decimal">
+        </label>
+      </div>
+    </div>
+
+    <div class="field">
       <span class="label">원고 입력 방식</span>
       <div class="input-mode-toggle" role="tablist">
         <button type="button" class="mode-btn active" data-mode="file" role="tab">파일 업로드</button>
@@ -123,10 +145,28 @@ for (const btn of modeBtns) {
 }
 setMode('file');
 
+const marginTop = document.getElementById('margin-top');
+const marginBottom = document.getElementById('margin-bottom');
+const marginInner = document.getElementById('margin-inner');
+const marginOuter = document.getElementById('margin-outer');
+const formatMap = new Map();
+
+const mmNum = (v) => parseFloat(String(v).replace('mm', ''));
+
+function applyFormatMargins(formatId) {
+  const f = formatMap.get(formatId);
+  if (!f || !f.margin) return;
+  marginTop.value = mmNum(f.margin.top);
+  marginBottom.value = mmNum(f.margin.bottom);
+  marginInner.value = mmNum(f.margin.left);
+  marginOuter.value = mmNum(f.margin.right);
+}
+
 fetch('/api/formats')
   .then((r) => r.json())
   .then((formats) => {
     for (const f of formats) {
+      formatMap.set(f.id, f);
       const w = f.width.replace('mm', '');
       const h = f.height.replace('mm', '');
       const opt = document.createElement('option');
@@ -134,11 +174,14 @@ fetch('/api/formats')
       opt.textContent = `${f.name} (${w}×${h}mm)`;
       formatSelect.appendChild(opt);
     }
+    if (formatSelect.value) applyFormatMargins(formatSelect.value);
   })
   .catch(() => {
     status.textContent = '서버에서 포맷 목록을 가져오지 못했어요.';
     status.className = 'status error';
   });
+
+formatSelect.addEventListener('change', () => applyFormatMargins(formatSelect.value));
 
 const previewBtn = document.getElementById('preview-btn');
 const previewModal = document.getElementById('preview-modal');
