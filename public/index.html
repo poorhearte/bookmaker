@@ -93,26 +93,29 @@
       </div>
     </div>
 
-    <label class="field" id="file-field">
-      <span class="label">원고 파일 <small>(.md / .txt / .docx)</small></span>
-      <input name="file" type="file" accept=".md,.markdown,.txt,.docx">
-    </label>
+    <details class="field collapsible" id="file-field" open>
+      <summary class="collapsible-summary">원고 파일 <small>(.md / .txt / .docx)</small></summary>
+      <div class="collapsible-body">
+        <input name="file" type="file" accept=".md,.markdown,.txt,.docx">
+      </div>
+    </details>
 
-    <label class="field" id="text-field" hidden>
-      <span class="label">원고 내용 <small>(Markdown 문법 사용 가능)</small></span>
-      <textarea name="content" rows="14" placeholder="# 첫 번째 장&#10;&#10;여기에 글을 직접 작성하세요.&#10;&#10;## 절 제목&#10;&#10;본문 내용..."></textarea>
-    </label>
+    <details class="field collapsible" id="text-field" open hidden>
+      <summary class="collapsible-summary">원고 내용 <small>(Markdown 문법 사용 가능)</small></summary>
+      <div class="collapsible-body">
+        <textarea name="content" rows="14" placeholder="# 첫 번째 장&#10;&#10;여기에 글을 직접 작성하세요.&#10;&#10;## 절 제목&#10;&#10;본문 내용..."></textarea>
+      </div>
+    </details>
 
-    <div class="field">
-      <span class="label">
-        목차
-        <small>(선택 — 비워두면 본문 헤딩에서 자동 생성)</small>
-      </span>
-      <textarea name="toc" id="toc-input" rows="5" placeholder="한 줄에 한 항목&#10;공백으로 들여쓰면 하위 항목&#10;예:&#10;제1장 봄날의 기록&#10;  들어가며&#10;제2장 여름"></textarea>
-      <button type="button" id="toc-autofill-btn" class="btn-secondary toc-autofill">
-        본문에서 자동 채우기
-      </button>
-    </div>
+    <details class="field collapsible" id="toc-field" open>
+      <summary class="collapsible-summary">목차 <small>(선택 — 비워두면 본문 헤딩에서 자동 생성)</small></summary>
+      <div class="collapsible-body">
+        <textarea name="toc" id="toc-input" rows="5" placeholder="한 줄에 한 항목&#10;공백으로 들여쓰면 하위 항목&#10;예:&#10;제1장 봄날의 기록&#10;  들어가며&#10;제2장 여름"></textarea>
+        <button type="button" id="toc-autofill-btn" class="btn-secondary toc-autofill">
+          본문에서 자동 채우기
+        </button>
+      </div>
+    </details>
 
     <div class="actions">
       <button id="preview-btn" type="button" class="btn-secondary">미리보기</button>
@@ -165,14 +168,32 @@ function setMode(newMode) {
   if (mode === 'file') {
     fileField.hidden = false;
     textField.hidden = true;
-    fileInput.required = true;
-    textInput.required = false;
+    fileField.open = true;
   } else {
     fileField.hidden = true;
     textField.hidden = false;
-    fileInput.required = false;
-    textInput.required = true;
+    textField.open = true;
   }
+}
+
+// A required control inside a collapsed <details> is "not focusable" and
+// breaks reportValidity(), so the manuscript source is checked here instead.
+function validateSource() {
+  if (mode === 'file' && (!fileInput.files || fileInput.files.length === 0)) {
+    fileField.hidden = false;
+    fileField.open = true;
+    status.className = 'status error';
+    status.textContent = '원고 파일을 선택해 주세요.';
+    return false;
+  }
+  if (mode === 'text' && !textInput.value.trim()) {
+    textField.hidden = false;
+    textField.open = true;
+    status.className = 'status error';
+    status.textContent = '원고 내용을 입력해 주세요.';
+    return false;
+  }
+  return true;
 }
 for (const btn of modeBtns) {
   btn.addEventListener('click', () => setMode(btn.dataset.mode));
@@ -294,6 +315,7 @@ function setBusy(busy, label) {
 }
 
 async function generatePdf() {
+  if (!validateSource()) return null;
   if (!form.reportValidity()) return null;
   const fd = new FormData(form);
   const res = await fetch('/api/convert', { method: 'POST', body: fd });
@@ -345,6 +367,7 @@ form.addEventListener('submit', async (e) => {
 });
 
 previewBtn.addEventListener('click', async () => {
+  if (!validateSource()) return;
   if (!form.reportValidity()) return;
   setBusy(true, '미리보기 생성 중...');
   try {

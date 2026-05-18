@@ -81,6 +81,63 @@ form {
   margin-left: 4px;
 }
 
+details.collapsible {
+  display: block;
+  gap: 0;
+}
+
+.collapsible-summary {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--ink);
+  padding: 8px 10px;
+  background: #faf7f0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  transition: background 0.15s;
+}
+
+.collapsible-summary:hover {
+  background: #f3ecdb;
+}
+
+.collapsible-summary::-webkit-details-marker {
+  display: none;
+}
+
+.collapsible-summary::before {
+  content: '';
+  flex: 0 0 auto;
+  width: 0;
+  height: 0;
+  border-left: 5px solid var(--ink-soft);
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  transition: transform 0.15s;
+}
+
+details.collapsible[open] > .collapsible-summary::before {
+  transform: rotate(90deg);
+}
+
+.collapsible-summary small {
+  color: var(--ink-soft);
+  font-weight: 400;
+}
+
+.collapsible-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
 input[type="text"],
 input[type="number"],
 select {
