@@ -125,6 +125,32 @@ select:focus {
   width: 100%;
 }
 
+.checkbox-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin-top: 12px;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.checkbox-row input[type="checkbox"] {
+  margin: 3px 0 0 0;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.checkbox-row small {
+  display: block;
+  color: var(--ink-soft);
+  font-size: 12px;
+  margin-top: 2px;
+}
+
 .input-mode-toggle {
   display: flex;
   gap: 0;

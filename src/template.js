@@ -113,9 +113,31 @@ function buildColophon({ title, author }) {
 </section>`;
 }
 
-export function buildContentHtml({ html, format, title, author, tocItems }) {
+function mirrorPageRules(format, firstContentPageIsRecto) {
+  const inner = format.margin.left;
+  const outer = format.margin.right;
+  const recto = `margin-left: ${inner}; margin-right: ${outer};`;
+  const verso = `margin-left: ${outer}; margin-right: ${inner};`;
+  return `
+@page { margin-top: ${format.margin.top}; margin-bottom: ${format.margin.bottom}; }
+@page :right { ${firstContentPageIsRecto ? recto : verso} }
+@page :left { ${firstContentPageIsRecto ? verso : recto} }`;
+}
+
+export function buildContentHtml({
+  html,
+  format,
+  title,
+  author,
+  tocItems,
+  mirror = false,
+  firstContentPageIsRecto = true,
+}) {
   const toc = buildToc(tocItems);
   const colophon = buildColophon({ title, author });
+  const mirrorCss = mirror
+    ? mirrorPageRules(format, firstContentPageIsRecto)
+    : '';
   return `<!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -123,6 +145,7 @@ export function buildContentHtml({ html, format, title, author, tocItems }) {
 <title>${esc(title)}</title>${SHARED_HEAD}
 <style>
 ${bodyStyles(format)}
+${mirrorCss}
 .toc {
   page-break-after: always;
   padding-top: 1em;

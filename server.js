@@ -119,6 +119,9 @@ app.post('/api/convert', upload.single('file'), async (req, res) => {
     (req.body.title || '').trim() || (prep.hasContent ? '제목 없음' : baseName);
   const author = (req.body.author || '').trim();
   const tocText = (req.body.toc || '').trim();
+  const mirror = ['on', 'true', '1'].includes(
+    String(req.body.mirror).toLowerCase(),
+  );
 
   const effFormat = { ...format, margin: resolveMargin(req.body, format) };
 
@@ -133,6 +136,7 @@ app.post('/api/convert', upload.single('file'), async (req, res) => {
       format: effFormat,
       title,
       author,
+      mirror,
     });
     const sanitize = (s) => s.replace(/[<>:"/\\|?*\x00-\x1f]/g, '').trim();
     const today = new Date().toISOString().slice(0, 10);
